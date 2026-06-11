@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>FinTrack — Dashboard Keuangan</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0f1117;--surface:#181c27;--surface2:#1f2435;--surface3:#252b3b;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#f0f2f8;--muted:#8a90a8;--muted2:#5a6178;
+  --accent:#4f7fff;--accent-dim:rgba(79,127,255,0.12);
+  --green:#34d399;--green-dim:rgba(52,211,153,0.12);
+  --red:#f87171;--red-dim:rgba(248,113,113,0.12);
+  --amber:#fbbf24;--amber-dim:rgba(251,191,36,0.12);
+  --purple:#a78bfa;--purple-dim:rgba(167,139,250,0.12);
+  --r:14px;--rsm:8px;--sidebar:220px;
+}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14px;line-height:1.5;}
+
+/* SIDEBAR */
+.sidebar{width:var(--sidebar);min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0;position:fixed;top:0;left:0;z-index:10;}
+.logo{padding:0 20px 22px;border-bottom:1px solid var(--border);margin-bottom:10px;}
+.logo .brand{font-size:18px;font-weight:800;letter-spacing:-0.4px;}.logo .brand span{color:var(--accent);}
+.logo .tagline{font-size:11px;color:var(--muted);margin-top:2px;}
+.nav{flex:1;padding:0 10px;overflow-y:auto;}
+.nav-section{font-size:10px;font-weight:600;letter-spacing:.08em;color:var(--muted2);padding:0 10px;margin:16px 0 5px;text-transform:uppercase;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--rsm);cursor:pointer;color:var(--muted);transition:all .15s;margin-bottom:2px;user-select:none;}
+.nav-item:hover{background:var(--surface2);color:var(--text);}
+.nav-item.active{background:var(--accent-dim);color:var(--accent);}
+.nav-item svg{width:17px;height:17px;flex-shrink:0;}
+.nav-item .lbl{font-size:13.5px;font-weight:500;}
+.nav-item .badge{margin-left:auto;background:var(--accent);color:#fff;font-size:10px;font-weight:600;padding:1px 6px;border-radius:20px;}
+.sidebar-footer{padding:14px 20px 0;border-top:1px solid var(--border);margin-top:8px;}
+.u-card{display:flex;align-items:center;gap:10px;}
+.ava{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;}
+.u-info .uname{font-size:13px;font-weight:600;}.u-info .urole{font-size:11px;color:var(--muted);}
+
+/* MAIN */
+.main{margin-left:var(--sidebar);flex:1;padding:28px 32px 48px;max-width:calc(100vw - var(--sidebar));}
+.page{display:none;animation:fadeIn .2s ease;}.page.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+.topbar-left .greeting{font-size:12px;color:var(--muted);margin-bottom:4px;}
+.topbar-left .pg-title{font-size:22px;font-weight:700;letter-spacing:-.5px;}
+.nw-card{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:16px 22px;min-width:300px;}
+.nw-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;}
+.nw-value{font-size:28px;font-weight:800;letter-spacing:-1px;font-variant-numeric:tabular-nums;}
+.nw-delta{font-size:12px;color:var(--green);font-weight:600;margin-top:4px;display:flex;align-items:center;gap:4px;}
+
+/* COMMON */
+.sec-title{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;}
+.ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.ptitle{font-size:14px;font-weight:600;}
+.plink{font-size:12px;color:var(--accent);cursor:pointer;}
+.btn-primary{padding:9px 20px;border-radius:var(--rsm);background:var(--accent);border:none;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .15s;white-space:nowrap;}
+.btn-primary:hover{opacity:.85;}
+.btn-outline{padding:9px 20px;border-radius:var(--rsm);background:transparent;border:1px solid var(--border2);color:var(--text);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;}
+.btn-outline:hover{background:var(--surface2);}
+.btn-sm{padding:6px 12px;border-radius:var(--rsm);border:1px solid var(--border2);background:transparent;color:var(--text);font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s;}
+.btn-sm:hover{background:var(--surface2);}
+.btn-sm.danger{border-color:var(--red-dim);color:var(--red);}
+.btn-sm.danger:hover{background:var(--red-dim);}
+.btn-danger-outline{padding:9px 20px;border-radius:var(--rsm);background:transparent;border:1px solid var(--red-dim);color:var(--red);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;transition:all .15s;}
+.btn-danger-outline:hover{background:var(--red-dim);}
+.btn-row{display:flex;gap:10px;margin-top:18px;}
+
+/* DASHBOARD CARDS */
+.cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
+.sum-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;position:relative;overflow:hidden;transition:border-color .15s;}
+.sum-card:hover{border-color:var(--border2);}
+.sum-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--r) var(--r) 0 0;}
+.sum-card.bank::before{background:var(--accent);}.sum-card.invest::before{background:var(--green);}.sum-card.crypto::before{background:var(--amber);}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.ci{width:34px;height:34px;border-radius:var(--rsm);display:flex;align-items:center;justify-content:center;}
+.ci.blue{background:var(--accent-dim);color:var(--accent);}.ci.green{background:var(--green-dim);color:var(--green);}.ci.amber{background:var(--amber-dim);color:var(--amber);}
+.ci svg{width:18px;height:18px;}
+.cbadge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;}
+.cbadge.up{background:var(--green-dim);color:var(--green);}.cbadge.down{background:var(--red-dim);color:var(--red);}
+.clabel{font-size:12px;color:var(--muted);margin-bottom:4px;}
+.cvalue{font-size:22px;font-weight:700;letter-spacing:-.5px;font-variant-numeric:tabular-nums;}
+.csub{font-size:11px;color:var(--muted);margin-top:4px;}
+
+/* MID GRID */
+.mid-grid{display:grid;grid-template-columns:1fr 1.2fr;gap:16px;margin-bottom:20px;align-items:start;}
+.chart-wrap{position:relative;width:175px;height:175px;margin:0 auto 18px;}
+.chart-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;}
+.chart-center .ct{font-size:10px;color:var(--muted);}.chart-center .cv{font-size:15px;font-weight:700;letter-spacing:-.5px;}
+.legend{display:flex;flex-direction:column;gap:8px;}
+.leg-item{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;}
+.leg-item .left{display:flex;align-items:center;gap:8px;}
+.ldot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+.leg-item .pct{font-weight:600;color:var(--muted);}
+.alloc-list{display:flex;flex-direction:column;gap:12px;}
+.alloc-item .atop{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;}
+.aname{font-size:13px;font-weight:500;}.ameta{font-size:11px;color:var(--muted);}
+.bar-track{height:5px;background:var(--surface2);border-radius:99px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:99px;}
+
+/* TRANSACTIONS */
+.tx-list{display:flex;flex-direction:column;}
+.tx-item{display:flex;align-items:center;gap:13px;padding:11px 0;border-bottom:1px solid var(--border);}
+.tx-item:last-child{border-bottom:none;}
+.tx-ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.tx-ico svg{width:17px;height:17px;}
+.tx-info{flex:1;min-width:0;}
+.tx-name{font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tx-meta{font-size:11px;color:var(--muted);margin-top:1px;}
+.tx-right{text-align:right;flex-shrink:0;}
+.tx-amt{font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums;}
+.tx-amt.cr{color:var(--green);}.tx-amt.db{color:var(--red);}
+.tx-date{font-size:11px;color:var(--muted);margin-top:1px;}
+.stag{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:600;flex-shrink:0;}
+.stag.bca{background:rgba(0,100,255,.12);color:#6699ff;}
+.stag.mandiri{background:var(--amber-dim);color:var(--amber);}
+.stag.crypto{background:var(--purple-dim);color:var(--purple);}
+.stag.invest{background:var(--green-dim);color:var(--green);}
+
+/* FILTER BAR */
+.filter-bar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.filter-btn{padding:7px 14px;border-radius:var(--rsm);border:1px solid var(--border2);background:transparent;color:var(--muted);font-size:12.5px;cursor:pointer;transition:all .15s;font-family:inherit;}
+.filter-btn:hover{background:var(--surface2);color:var(--text);}
+.filter-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
+.search-box{flex:1;min-width:180px;max-width:280px;position:relative;}
+.search-box input{width:100%;padding:7px 12px 7px 34px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rsm);color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color .15s;}
+.search-box input::placeholder{color:var(--muted);}
+.search-box input:focus{border-color:var(--accent);}
+.search-box svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:15px;height:15px;color:var(--muted);pointer-events:none;}
+
+/* ACCOUNTS */
+.accounts-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:22px;}
+.acc-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;display:flex;flex-direction:column;gap:14px;transition:border-color .15s;}
+.acc-card:hover{border-color:var(--border2);}
+.acc-header{display:flex;align-items:center;gap:12px;}
+.acc-logo{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;}
+.acc-info .acc-name{font-size:14px;font-weight:600;}.acc-info .acc-type{font-size:11px;color:var(--muted);}
+.acc-status{display:flex;align-items:center;gap:6px;font-size:12px;}
+.dot-on{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.dot-off{width:7px;height:7px;border-radius:50%;background:var(--muted2);flex-shrink:0;}
+.acc-balance{font-size:20px;font-weight:700;letter-spacing:-.4px;}
+.acc-footer{display:flex;align-items:center;justify-content:space-between;}
+.acc-sync{font-size:11px;color:var(--muted);}
+.add-acc-card{background:var(--surface);border:2px dashed var(--border2);border-radius:var(--r);padding:28px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:all .15s;min-height:165px;}
+.add-acc-card:hover{border-color:var(--accent);background:var(--accent-dim);}
+.add-acc-card .add-ico{width:28px;height:28px;color:var(--muted);}
+.add-acc-card:hover .add-ico{color:var(--accent);}
+.add-acc-card .add-label{font-size:13px;font-weight:500;color:var(--muted);}
+.add-acc-card:hover .add-label{color:var(--accent);}
+
+/* PROFILE */
+.profile-header{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:26px;display:flex;align-items:center;gap:22px;margin-bottom:16px;flex-wrap:wrap;}
+.ava-lg{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;flex-shrink:0;}
+.profile-name{font-size:20px;font-weight:700;letter-spacing:-.4px;}
+.profile-email{font-size:13px;color:var(--muted);margin-top:3px;}
+.profile-badges{display:flex;gap:8px;margin-top:10px;}
+.pbadge{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:600;}
+.pbadge.pro{background:var(--accent-dim);color:var(--accent);}
+.pbadge.verified{background:var(--green-dim);color:var(--green);}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+.stat-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;}
+.stat-label{font-size:11px;color:var(--muted);margin-bottom:4px;}
+.stat-value{font-size:18px;font-weight:700;letter-spacing:-.4px;}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+
+/* SETTINGS */
+.settings-grid{display:grid;grid-template-columns:210px 1fr;gap:18px;align-items:start;}
+.settings-nav{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:8px;}
+.sn-item{padding:9px 12px;border-radius:var(--rsm);cursor:pointer;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:9px;transition:all .15s;user-select:none;}
+.sn-item:hover{background:var(--surface2);color:var(--text);}
+.sn-item.active{background:var(--accent-dim);color:var(--accent);}
+.sn-item svg{width:15px;height:15px;flex-shrink:0;}
+.settings-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px;}
+.stitle{font-size:14px;font-weight:600;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+.form-row{display:flex;flex-direction:column;gap:5px;margin-bottom:15px;}
+.form-row:last-of-type{margin-bottom:0;}
+.form-label{font-size:12px;font-weight:500;color:var(--muted);}
+.form-input{padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--rsm);color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color .15s;}
+.form-input:focus{border-color:var(--accent);}
+.form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:15px;}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);}
+.toggle-row:last-of-type{border-bottom:none;padding-bottom:0;}
+.toggle-info .tname{font-size:13px;font-weight:500;}
+.toggle-info .tdesc{font-size:11px;color:var(--muted);margin-top:2px;}
+.toggle{position:relative;width:40px;height:22px;cursor:pointer;flex-shrink:0;}
+.toggle input{display:none;}
+.toggle-track{display:block;width:40px;height:22px;background:var(--surface3);border-radius:99px;transition:background .2s;border:1px solid var(--border);}
+.toggle input:checked + .toggle-track{background:var(--accent);}
+.toggle-thumb{position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;pointer-events:none;}
+.toggle input:checked ~ .toggle-thumb{transform:translateX(18px);}
+
+/* TOAST */
+.toast{position:fixed;bottom:28px;right:28px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--rsm);padding:12px 18px;font-size:13px;display:none;z-index:100;max-width:290px;box-shadow:0 4px 20px rgba(0,0,0,.4);}
+.toast.show{display:block;animation:fadeInUp .25s ease;}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:99px;}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="brand">Fin<span>Track</span></div>
+    <div class="tagline">Aggregator Keuangan Pribadi</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">Menu Utama</div>
+    <div class="nav-item active" data-page="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span class="lbl">Dashboard</span>
+    </div>
+    <div class="nav-item" data-page="accounts">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+      <span class="lbl">Hubungkan Akun</span>
+      <span class="badge">4</span>
+    </div>
+    <div class="nav-item" data-page="transactions">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7A5 5 0 0 1 7 7h2"/><path d="M15 7h2a5 5 0 0 1 0 10h-2"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      <span class="lbl">Transaksi</span>
+    </div>
+    <div class="nav-section">Akun</div>
+    <div class="nav-item" data-page="profile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.58-7 8-7s8 3 8 7"/></svg>
+      <span class="lbl">Profil</span>
+    </div>
+    <div class="nav-item" data-page="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 1 0 21 12"/></svg>
+      <span class="lbl">Pengaturan</span>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="u-card">
+      <div class="ava">VD</div>
+      <div class="u-info">
+        <div class="uname">Valdo</div>
+        <div class="urole">Akun Pribadi · Pro</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+
+<!-- ══════════════════════════════════════
+     HALAMAN 1: DASHBOARD
+══════════════════════════════════════ -->
+<div id="page-dashboard" class="page active">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="greeting">Selamat datang kembali 👋</div>
+      <div class="pg-title">Ringkasan Keuangan</div>
+    </div>
+    <div class="nw-card">
+      <div class="nw-label">Total Kekayaan Bersih</div>
+      <div class="nw-value">Rp 86.850.000</div>
+      <div class="nw-delta">
+        <svg style="width:13px;height:13px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+        +Rp 1.240.000 bulan ini (2,1%)
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-title">Ringkasan Aset</div>
+  <div class="cards-grid">
+    <div class="sum-card bank">
+      <div class="ch">
+        <div class="ci blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
+        <span class="cbadge up">▲ 0,8%</span>
+      </div>
+      <div class="clabel">Saldo Bank</div>
+      <div class="cvalue bal-val">Rp 28.450.000</div>
+      <div class="csub">BCA + Mandiri · 2 rekening aktif</div>
+    </div>
+    <div class="sum-card invest">
+      <div class="ch">
+        <div class="ci green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></div>
+        <span class="cbadge up">▲ 4,3%</span>
+      </div>
+      <div class="clabel">Saham &amp; Reksa Dana</div>
+      <div class="cvalue bal-val">Rp 42.800.000</div>
+      <div class="csub">Bibit + Stockbit · 6 instrumen</div>
+    </div>
+    <div class="sum-card crypto">
+      <div class="ch">
+        <div class="ci amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.5 8.5h4a2 2 0 0 1 0 4H9.5"/><path d="M9.5 12.5h4.5a2 2 0 0 1 0 4H9.5"/><line x1="9.5" y1="8.5" x2="9.5" y2="16.5"/><line x1="12" y1="7" x2="12" y2="8.5"/><line x1="12" y1="16.5" x2="12" y2="18"/></svg></div>
+        <span class="cbadge down">▼ 1,2%</span>
+      </div>
+      <div class="clabel">Total Crypto</div>
+      <div class="cvalue bal-val">Rp 15.600.000</div>
+      <div class="csub">Indodax · BTC, ETH, BNB</div>
+    </div>
+  </div>
+
+  <div class="mid-grid">
+    <div class="panel">
+      <div class="ph"><span class="ptitle">Distribusi Aset</span><span class="plink">Detail →</span></div>
+      <div class="chart-wrap">
+        <canvas id="pieChart"></canvas>
+        <div class="chart-center"><div class="ct">Total</div><div class="cv">Rp 86,8 Jt</div></div>
+      </div>
+      <div class="legend">
+        <div class="leg-item"><div class="left"><div class="ldot" style="background:#4f7fff"></div><span>Saldo Bank</span></div><span class="pct">32,8%</span></div>
+        <div class="leg-item"><div class="left"><div class="ldot" style="background:#34d399"></div><span>Saham / Reksa Dana</span></div><span class="pct">49,3%</span></div>
+        <div class="leg-item"><div class="left"><div class="ldot" style="background:#fbbf24"></div><span>Crypto</span></div><span class="pct">17,9%</span></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ph"><span class="ptitle">Alokasi per Instrumen</span><span class="plink">Atur →</span></div>
+      <div class="alloc-list">
+        <div class="alloc-item"><div class="atop"><span class="aname">Reksa Dana Pasar Uang</span><span class="ameta">Rp 18,5 Jt · 21,3%</span></div><div class="bar-track"><div class="bar-fill" style="width:21.3%;background:#34d399"></div></div></div>
+        <div class="alloc-item"><div class="atop"><span class="aname">BCA Tabungan</span><span class="ameta">Rp 17,8 Jt · 20,5%</span></div><div class="bar-track"><div class="bar-fill" style="width:20.5%;background:#4f7fff"></div></div></div>
+        <div class="alloc-item"><div class="atop"><span class="aname">Saham BBCA / TLKM</span><span class="ameta">Rp 14,3 Jt · 16,5%</span></div><div class="bar-track"><div class="bar-fill" style="width:16.5%;background:#34d399"></div></div></div>
+        <div class="alloc-item"><div class="atop"><span class="aname">Reksa Dana Saham</span><span class="ameta">Rp 10 Jt · 11,5%</span></div><div class="bar-track"><div class="bar-fill" style="width:11.5%;background:#34d399"></div></div></div>
+        <div class="alloc-item"><div class="atop"><span class="aname">Bitcoin (BTC)</span><span class="ameta">Rp 9,2 Jt · 10,6%</span></div><div class="bar-track"><div class="bar-fill" style="width:10.6%;background:#fbbf24"></div></div></div>
+        <div class="alloc-item"><div class="atop"><span class="aname">Mandiri Tabungan</span><span class="ameta">Rp 10,6 Jt · 12,3%</span></div><div class="bar-track"><div class="bar-fill" style="width:12.3%;background:#4f7fff"></div></div></div>
+        <div class="alloc-item"><div class="atop"><span class="aname">Ethereum &amp; Lainnya</span><span class="ameta">Rp 6,4 Jt · 7,4%</span></div><div class="bar-track"><div class="bar-fill" style="width:7.4%;background:#fbbf24"></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ph">
+      <span class="ptitle">Transaksi Terakhir</span>
+      <span class="plink" onclick="goPage('transactions')">Lihat semua →</span>
+    </div>
+    <div class="tx-list" id="dash-tx"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     HALAMAN 2: HUBUNGKAN AKUN
+══════════════════════════════════════ -->
+<div id="page-accounts" class="page">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="greeting">Kelola sumber data keuanganmu</div>
+      <div class="pg-title">Akun Terhubung</div>
+    </div>
+    <button class="btn-primary" onclick="showToast('✓ Fitur tambah akun baru segera hadir!')">+ Tambah Akun</button>
+  </div>
+
+  <div class="sec-title">Akun Aktif (4)</div>
+  <div class="accounts-grid">
+    <div class="acc-card">
+      <div class="acc-header">
+        <div class="acc-logo" style="background:#4f7fff20;color:#4f7fff;font-size:12px;">BCA</div>
+        <div class="acc-info"><div class="acc-name">BCA — Tabungan</div><div class="acc-type">Rekening Bank · No. ****1234</div></div>
+      </div>
+      <div><div class="clabel">Saldo Saat Ini</div><div class="acc-balance bal-val">Rp 17.800.000</div></div>
+      <div class="acc-footer">
+        <div class="acc-status"><div class="dot-on"></div><span style="font-size:12px;color:var(--green)">Tersinkron · 5 mnt lalu</span></div>
+        <button class="btn-sm danger" onclick="showToast('⚠ Akun BCA diputus dari FinTrack.')">Putus</button>
+      </div>
+    </div>
+
+    <div class="acc-card">
+      <div class="acc-header">
+        <div class="acc-logo" style="background:#fbbf2420;color:#fbbf24;font-size:11px;">MND</div>
+        <div class="acc-info"><div class="acc-name">Mandiri — Tabungan</div><div class="acc-type">Rekening Bank · No. ****5678</div></div>
+      </div>
+      <div><div class="clabel">Saldo Saat Ini</div><div class="acc-balance bal-val">Rp 10.650.000</div></div>
+      <div class="acc-footer">
+        <div class="acc-status"><div class="dot-on"></div><span style="font-size:12px;color:var(--green)">Tersinkron · 2 jam lalu</span></div>
+        <button class="btn-sm danger" onclick="showToast('⚠ Akun Mandiri diputus dari FinTrack.')">Putus</button>
+      </div>
+    </div>
+
+    <div class="acc-card">
+      <div class="acc-header">
+        <div class="acc-logo" style="background:#34d39920;color:#34d399;font-size:11px;">BBT</div>
+        <div class="acc-info"><div class="acc-name">Bibit — Reksa Dana</div><div class="acc-type">Platform Investasi · 5 instrumen</div></div>
+      </div>
+      <div><div class="clabel">Nilai Portofolio</div><div class="acc-balance bal-val">Rp 28.500.000</div></div>
+      <div class="acc-footer">
+        <div class="acc-status"><div class="dot-on"></div><span style="font-size:12px;color:var(--green)">Tersinkron · 1 jam lalu</span></div>
+        <button class="btn-sm danger" onclick="showToast('⚠ Akun Bibit diputus dari FinTrack.')">Putus</button>
+      </div>
+    </div>
+
+    <div class="acc-card">
+      <div class="acc-header">
+        <div class="acc-logo" style="background:#a78bfa20;color:#a78bfa;font-size:11px;">IDX</div>
+        <div class="acc-info"><div class="acc-name">Indodax — Crypto</div><div class="acc-type">Platform Kripto · BTC, ETH, BNB</div></div>
+      </div>
+      <div><div class="clabel">Nilai Aset</div><div class="acc-balance bal-val">Rp 15.600.000</div></div>
+      <div class="acc-footer">
+        <div class="acc-status"><div class="dot-off"></div><span style="font-size:12px;color:var(--muted)">Belum tersinkron · 6 jam lalu</span></div>
+        <button class="btn-sm" onclick="showToast('🔄 Menyinkronkan akun Indodax...')">Sync</button>
+      </div>
+    </div>
+
+    <div class="add-acc-card" onclick="showToast('✓ Halaman tambah akun baru akan segera hadir!')">
+      <svg class="add-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      <div class="add-label">Tambah Akun Baru</div>
+      <div style="font-size:11px;color:var(--muted2)">Bank, investasi, crypto, e-wallet</div>
+    </div>
+  </div>
+
+  <div class="sec-title">Platform yang Bisa Dihubungkan</div>
+  <div class="panel">
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);border-radius:8px;overflow:hidden;">
+      <div style="background:var(--surface);padding:16px;text-align:center;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='var(--surface)'" onclick="showToast('Menghubungkan ke GoPay...')">
+        <div style="font-size:13px;font-weight:700;color:#00aed6;margin-bottom:4px;">GoPay</div>
+        <div style="font-size:11px;color:var(--muted)">E-Wallet</div>
+      </div>
+      <div style="background:var(--surface);padding:16px;text-align:center;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='var(--surface)'" onclick="showToast('Menghubungkan ke OVO...')">
+        <div style="font-size:13px;font-weight:700;color:#7c3aed;margin-bottom:4px;">OVO</div>
+        <div style="font-size:11px;color:var(--muted)">E-Wallet</div>
+      </div>
+      <div style="background:var(--surface);padding:16px;text-align:center;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='var(--surface)'" onclick="showToast('Menghubungkan ke DANA...')">
+        <div style="font-size:13px;font-weight:700;color:#118eea;margin-bottom:4px;">DANA</div>
+        <div style="font-size:11px;color:var(--muted)">E-Wallet</div>
+      </div>
+      <div style="background:var(--surface);padding:16px;text-align:center;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='var(--surface)'" onclick="showToast('Menghubungkan ke Stockbit...')">
+        <div style="font-size:13px;font-weight:700;color:#f97316;margin-bottom:4px;">Stockbit</div>
+        <div style="font-size:11px;color:var(--muted)">Saham</div>
+      </div>
+      <div style="background:var(--surface);padding:16px;text-align:center;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='var(--surface)'" onclick="showToast('Menghubungkan ke SeaBank...')">
+        <div style="font-size:13px;font-weight:700;color:#2dd4bf;margin-bottom:4px;">SeaBank</div>
+        <div style="font-size:11px;color:var(--muted)">Bank Digital</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     HALAMAN 3: TRANSAKSI
+══════════════════════════════════════ -->
+<div id="page-transactions" class="page">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="greeting">Semua aktivitas dari akun terhubung</div>
+      <div class="pg-title">Riwayat Transaksi</div>
+    </div>
+    <button class="btn-outline" onclick="showToast('📥 Mengekspor data ke CSV...')">⬇ Ekspor CSV</button>
+  </div>
+
+  <div class="filter-bar">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Cari transaksi..." id="txSearch" oninput="filterTx()">
+    </div>
+    <button class="filter-btn active" onclick="setFilter(this,'Semua')">Semua</button>
+    <button class="filter-btn" onclick="setFilter(this,'Masuk')">Masuk</button>
+    <button class="filter-btn" onclick="setFilter(this,'Keluar')">Keluar</button>
+    <button class="filter-btn" onclick="setFilter(this,'Investasi')">Investasi</button>
+    <button class="filter-btn" onclick="setFilter(this,'Crypto')">Crypto</button>
+  </div>
+
+  <div class="panel">
+    <div class="ph">
+      <span class="ptitle">Juni 2026</span>
+      <span style="font-size:12px;color:var(--muted)" id="txCount">14 transaksi</span>
+    </div>
+    <div class="tx-list" id="full-tx"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     HALAMAN 4: PROFIL
+══════════════════════════════════════ -->
+<div id="page-profile" class="page">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="greeting">Informasi akun dan aktivitasmu</div>
+      <div class="pg-title">Profil Pengguna</div>
+    </div>
+    <button class="btn-primary" onclick="showToast('✓ Profil berhasil disimpan!')">Simpan Perubahan</button>
+  </div>
+
+  <div class="profile-header">
+    <div class="ava-lg">VD</div>
+    <div>
+      <div class="profile-name">Valdo Danuarta</div>
+      <div class="profile-email">valdo@unikma.ac.id</div>
+      <div class="profile-badges">
+        <span class="pbadge pro">Pro Plan</span>
+        <span class="pbadge verified">✓ Terverifikasi</span>
+      </div>
+    </div>
+    <div style="margin-left:auto">
+      <button class="btn-outline" onclick="showToast('📷 Pilih foto profil baru...')">Ganti Foto</button>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-box"><div class="stat-label">Total Aset</div><div class="stat-value bal-val">Rp 86,8 Jt</div><div class="stat-sub">4 akun terhubung</div></div>
+    <div class="stat-box"><div class="stat-label">Transaksi Bulan Ini</div><div class="stat-value">14</div><div class="stat-sub">Juni 2026</div></div>
+    <div class="stat-box"><div class="stat-label">Pertumbuhan Aset</div><div class="stat-value" style="color:var(--green)">+2,1%</div><div class="stat-sub">vs bulan lalu</div></div>
+    <div class="stat-box"><div class="stat-label">Bergabung Sejak</div><div class="stat-value" style="font-size:14px">Jan 2025</div><div class="stat-sub">17 bulan</div></div>
+  </div>
+
+  <div class="two-col">
+    <div class="panel">
+      <div class="stitle">Informasi Pribadi</div>
+      <div class="form-row"><label class="form-label">Nama Lengkap</label><input class="form-input" value="Valdo Danuarta"></div>
+      <div class="form-row"><label class="form-label">Email</label><input class="form-input" value="valdo@unikma.ac.id"></div>
+      <div class="form-row"><label class="form-label">Nomor Telepon</label><input class="form-input" value="+62 812-XXXX-XXXX"></div>
+      <div class="form-row"><label class="form-label">Kota / Lokasi</label><input class="form-input" value="Cilacap, Jawa Tengah"></div>
+      <div class="btn-row"><button class="btn-primary" onclick="showToast('✓ Informasi pribadi disimpan!')">Simpan</button></div>
+    </div>
+    <div class="panel">
+      <div class="stitle">Keamanan Akun</div>
+      <div class="form-row"><label class="form-label">Password Saat Ini</label><input class="form-input" type="password" placeholder="••••••••"></div>
+      <div class="form-row"><label class="form-label">Password Baru</label><input class="form-input" type="password" placeholder="Minimal 8 karakter"></div>
+      <div class="form-row"><label class="form-label">Konfirmasi Password Baru</label><input class="form-input" type="password" placeholder="Ulangi password baru"></div>
+      <div class="btn-row"><button class="btn-primary" onclick="showToast('✓ Password berhasil diperbarui!')">Perbarui Password</button></div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+        <div style="font-size:13px;font-weight:600;margin-bottom:6px">Autentikasi Dua Faktor (2FA)</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Aktifkan 2FA untuk keamanan ekstra pada akunmu.</div>
+        <button class="btn-outline" onclick="showToast('🔐 Mengaktifkan 2FA via Google Authenticator...')">Aktifkan 2FA</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     HALAMAN 5: PENGATURAN
+══════════════════════════════════════ -->
+<div id="page-settings" class="page">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="greeting">Sesuaikan FinTrack sesuai kebutuhanmu</div>
+      <div class="pg-title">Pengaturan</div>
+    </div>
+  </div>
+
+  <div class="settings-grid">
+    <div class="settings-nav">
+      <div class="sn-item active" onclick="setStab(this,'st-general')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 1 0 21 12"/></svg>Umum
+      </div>
+      <div class="sn-item" onclick="setStab(this,'st-notif')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Notifikasi
+      </div>
+      <div class="sn-item" onclick="setStab(this,'st-display')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Tampilan
+      </div>
+      <div class="sn-item" onclick="setStab(this,'st-privacy')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Privasi &amp; Data
+      </div>
+      <div class="sn-item" onclick="setStab(this,'st-danger')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span style="color:var(--red)">Zona Bahaya</span>
+      </div>
+    </div>
+
+    <div>
+      <!-- UMUM -->
+      <div id="st-general" class="settings-section">
+        <div class="stitle">Pengaturan Umum</div>
+        <div class="form-row-2">
+          <div><label class="form-label" style="display:block;margin-bottom:5px">Mata Uang</label>
+            <select class="form-input" style="width:100%"><option>IDR — Rupiah (Rp)</option><option>USD — Dollar ($)</option><option>EUR — Euro (€)</option></select>
+          </div>
+          <div><label class="form-label" style="display:block;margin-bottom:5px">Zona Waktu</label>
+            <select class="form-input" style="width:100%"><option>WIB — UTC+7 (Jakarta)</option><option>WITA — UTC+8</option><option>WIT — UTC+9</option></select>
+          </div>
+        </div>
+        <div class="form-row"><label class="form-label">Bahasa Antarmuka</label>
+          <select class="form-input"><option>Bahasa Indonesia</option><option>English</option></select>
+        </div>
+        <div class="form-row"><label class="form-label">Format Tanggal</label>
+          <select class="form-input"><option>DD/MM/YYYY</option><option>MM/DD/YYYY</option><option>YYYY-MM-DD</option></select>
+        </div>
+        <div class="form-row"><label class="form-label">Format Angka</label>
+          <select class="form-input"><option>1.000.000,00 (Indonesia)</option><option>1,000,000.00 (English)</option></select>
+        </div>
+        <div class="btn-row">
+          <button class="btn-primary" onclick="showToast('✓ Pengaturan umum disimpan!')">Simpan Perubahan</button>
+          <button class="btn-outline" onclick="showToast('Pengaturan direset ke default.')">Reset Default</button>
+        </div>
+      </div>
+
+      <!-- NOTIFIKASI -->
+      <div id="st-notif" class="settings-section" style="display:none">
+        <div class="stitle">Pengaturan Notifikasi</div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="tname">Notifikasi Email</div><div class="tdesc">Terima ringkasan mingguan via email</div></div>
+          <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="tname">Peringatan Transaksi Besar</div><div class="tdesc">Notifikasi jika transaksi melebihi Rp 1.000.000</div></div>
+          <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="tname">Peringatan Saldo Rendah</div><div class="tdesc">Notifikasi jika saldo di bawah batas minimum</div></div>
+          <label class="toggle"><input type="checkbox"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="tname">Update Harga Crypto</div><div class="tdesc">Notifikasi perubahan harga signifikan (±5%)</div></div>
+          <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="tname">Laporan Bulanan</div><div class="tdesc">Ringkasan keuangan dikirim setiap akhir bulan</div></div>
+          <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="tname">Sinkronisasi Otomatis</div><div class="tdesc">Perbarui data akun setiap 1 jam sekali</div></div>
+          <label class="toggle"><input type="checkbox"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+        <div class="btn-row"><button class="btn-primary" onclick="showToast('✓ Pengaturan notifikasi disimpan!')">Simpan</button></div>
+      </div>
+
+      <!-- TAMPILAN -->
+      <div id="st-display" class="settings-section" style="display:none">
+        <div class="stitle">Pengaturan Tampilan</div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="tname">Mode Gelap</div><div class="tdesc">Antarmuka dengan latar belakang gelap (aktif)</div></div>
+          <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="tname">Sembunyikan Saldo</div><div class="tdesc">Tampilkan nilai saldo sebagai ••••• untuk privasi</div></div>
+          <label class="toggle"><input type="checkbox" id="hideToggle" onchange="toggleHide()"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="tname">Animasi Halaman</div><div class="tdesc">Aktifkan animasi transisi saat berpindah halaman</div></div>
+          <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+        <div class="form-row" style="margin-top:16px"><label class="form-label">Ukuran Font</label>
+          <select class="form-input"><option>Kecil (13px)</option><option selected>Normal (14px)</option><option>Besar (16px)</option></select>
+        </div>
+        <div class="form-row"><label class="form-label">Halaman Awal saat Login</label>
+          <select class="form-input"><option selected>Dashboard</option><option>Transaksi</option><option>Profil</option></select>
+        </div>
+        <div class="btn-row"><button class="btn-primary" onclick="showToast('✓ Pengaturan tampilan disimpan!')">Simpan</button></div>
+      </div>
+
+      <!-- PRIVASI -->
+      <div id="st-privacy" class="settings-section" style="display:none">
+        <div class="stitle">Privasi &amp; Data</div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="tname">Analitik Penggunaan</div><div class="tdesc">Bantu kami perbaiki aplikasi dengan data anonim</div></div>
+          <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="tname">Enkripsi Data Lokal</div><div class="tdesc">Enkripsi data tersimpan di perangkat ini</div></div>
+          <label class="toggle"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info"><div class="tname">Login Otomatis</div><div class="tdesc">Tetap masuk selama 30 hari di perangkat ini</div></div>
+          <label class="toggle"><input type="checkbox"><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+          <div style="font-size:13px;font-weight:600;margin-bottom:6px">Ekspor Data Pribadi</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Unduh semua data transaksi dan riwayat akunmu.</div>
+          <div class="btn-row" style="margin-top:0">
+            <button class="btn-outline" onclick="showToast('📥 Mengekspor data sebagai JSON...')">Ekspor JSON</button>
+            <button class="btn-outline" onclick="showToast('📥 Mengekspor data sebagai CSV...')">Ekspor CSV</button>
+          </div>
+        </div>
+        <div class="btn-row"><button class="btn-primary" onclick="showToast('✓ Pengaturan privasi disimpan!')">Simpan</button></div>
+      </div>
+
+      <!-- ZONA BAHAYA -->
+      <div id="st-danger" class="settings-section" style="display:none;border-color:var(--red-dim)">
+        <div class="stitle" style="color:var(--red)">⚠ Zona Bahaya</div>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="padding:16px;background:var(--red-dim);border-radius:var(--rsm)">
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px">Keluar dari Semua Perangkat</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Terminasi semua sesi aktif di perangkat lain.</div>
+            <button class="btn-danger-outline" onclick="showToast('⚠ Semua sesi lain telah diakhiri.')">Keluar dari Semua Perangkat</button>
+          </div>
+          <div style="padding:16px;background:var(--red-dim);border-radius:var(--rsm)">
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px">Hapus Semua Riwayat Transaksi</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Tindakan ini tidak dapat dibatalkan. Semua data transaksi akan hilang permanen.</div>
+            <button class="btn-danger-outline" onclick="showToast('🔒 Konfirmasi password diperlukan.')">Hapus Riwayat Transaksi</button>
+          </div>
+          <div style="padding:16px;background:var(--red-dim);border-radius:var(--rsm)">
+            <div style="font-size:13px;font-weight:600;margin-bottom:4px">Hapus Akun Secara Permanen</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Semua data, akun terhubung, dan riwayat akan terhapus selamanya. Tidak bisa dipulihkan.</div>
+            <button class="btn-danger-outline" onclick="showToast('🔒 Konfirmasi email dikirim ke valdo@unikma.ac.id.')">Hapus Akun Saya</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── DATA TRANSAKSI ──
+const txData = [
+  {ico:'#f87171',ibg:'rgba(248,113,113,0.12)',name:'Tokopedia — Belanja Online',meta:'Debit · BCA Tabungan',tag:'bca',tlbl:'BCA',amt:-320000,date:'Hari ini, 09:24',type:'Keluar'},
+  {ico:'#34d399',ibg:'rgba(52,211,153,0.12)',name:'Top-up Bibit Reksa Dana',meta:'Transfer keluar · Mandiri',tag:'invest',tlbl:'Bibit',amt:-500000,date:'Kemarin, 14:10',type:'Investasi'},
+  {ico:'#34d399',ibg:'rgba(52,211,153,0.12)',name:'Gaji Bulanan — Transfer Masuk',meta:'Kredit · BCA Tabungan',tag:'bca',tlbl:'BCA',amt:4500000,date:'7 Jun, 08:00',type:'Masuk'},
+  {ico:'#a78bfa',ibg:'rgba(167,139,250,0.15)',name:'Beli ETH — Indodax',meta:'Beli aset kripto',tag:'crypto',tlbl:'Crypto',amt:-800000,date:'6 Jun, 21:45',type:'Crypto'},
+  {ico:'#fbbf24',ibg:'rgba(251,191,36,0.12)',name:'Bayar Tagihan Listrik PLN',meta:'Pembayaran tagihan · Mandiri',tag:'mandiri',tlbl:'Mandiri',amt:-210000,date:'5 Jun, 10:32',type:'Keluar'},
+  {ico:'#34d399',ibg:'rgba(52,211,153,0.12)',name:'Dividen BBCA — Stockbit',meta:'Pendapatan investasi',tag:'invest',tlbl:'Saham',amt:175000,date:'4 Jun, 15:00',type:'Investasi'},
+  {ico:'#f87171',ibg:'rgba(248,113,113,0.12)',name:'Grab — Transport & Food',meta:'Debit · BCA Tabungan',tag:'bca',tlbl:'BCA',amt:-95000,date:'3 Jun, 19:15',type:'Keluar'},
+  {ico:'#4f7fff',ibg:'rgba(79,127,255,0.12)',name:'Transfer ke Tabungan Mandiri',meta:'Transfer antar bank',tag:'mandiri',tlbl:'Mandiri',amt:-1000000,date:'2 Jun, 11:00',type:'Keluar'},
+  {ico:'#a78bfa',ibg:'rgba(167,139,250,0.15)',name:'Jual BTC — Indodax',meta:'Jual aset kripto',tag:'crypto',tlbl:'Crypto',amt:620000,date:'1 Jun, 16:40',type:'Masuk'},
+  {ico:'#f87171',ibg:'rgba(248,113,113,0.12)',name:'Shopee — Elektronik',meta:'Debit · BCA Tabungan',tag:'bca',tlbl:'BCA',amt:-450000,date:'31 Mei, 13:22',type:'Keluar'},
+  {ico:'#34d399',ibg:'rgba(52,211,153,0.12)',name:'Imbal Hasil Reksa Dana',meta:'Return mingguan · Bibit',tag:'invest',tlbl:'Bibit',amt:87500,date:'30 Mei, 09:00',type:'Investasi'},
+  {ico:'#fbbf24',ibg:'rgba(251,191,36,0.12)',name:'Top-up GoPay',meta:'Debit · Mandiri',tag:'mandiri',tlbl:'Mandiri',amt:-200000,date:'29 Mei, 18:05',type:'Keluar'},
+  {ico:'#34d399',ibg:'rgba(52,211,153,0.12)',name:'Gaji Bonus Proyek',meta:'Kredit · BCA Tabungan',tag:'bca',tlbl:'BCA',amt:1500000,date:'28 Mei, 10:00',type:'Masuk'},
+  {ico:'#a78bfa',ibg:'rgba(167,139,250,0.15)',name:'Beli BNB — Indodax',meta:'Beli aset kripto',tag:'crypto',tlbl:'Crypto',amt:-300000,date:'27 Mei, 20:30',type:'Crypto'},
+];
+
+function arrowUp(){return`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>`;}
+function arrowDown(){return`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>`;}
+
+function renderTx(el, data) {
+  if (!data.length) { el.innerHTML='<div style="text-align:center;padding:24px;color:var(--muted)">Tidak ada transaksi ditemukan.</div>'; return; }
+  el.innerHTML = data.map(t => `
+    <div class="tx-item">
+      <div class="tx-ico" style="background:${t.ibg};color:${t.ico}">${t.amt>0?arrowDown():arrowUp()}</div>
+      <div class="tx-info"><div class="tx-name">${t.name}</div><div class="tx-meta">${t.meta}</div></div>
+      <span class="stag ${t.tag}">${t.tlbl}</span>
+      <div class="tx-right">
+        <div class="tx-amt ${t.amt>0?'cr':'db'}">${t.amt>0?'+ ':'− '}Rp ${Math.abs(t.amt).toLocaleString('id-ID')}</div>
+        <div class="tx-date">${t.date}</div>
+      </div>
+    </div>`).join('');
+}
+
+renderTx(document.getElementById('dash-tx'), txData.slice(0, 7));
+renderTx(document.getElementById('full-tx'), txData);
+
+// FILTER
+let activeFilter = 'Semua';
+function setFilter(btn, f) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterTx();
+}
+function filterTx() {
+  const q = document.getElementById('txSearch').value.toLowerCase();
+  let r = txData;
+  if (activeFilter !== 'Semua') r = r.filter(t => t.type === activeFilter);
+  if (q) r = r.filter(t => t.name.toLowerCase().includes(q) || t.meta.toLowerCase().includes(q));
+  renderTx(document.getElementById('full-tx'), r);
+  document.getElementById('txCount').textContent = r.length + ' transaksi';
+}
+
+// PIE CHART
+const total = 86850000;
+new Chart(document.getElementById('pieChart').getContext('2d'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Saldo Bank', 'Saham & RD', 'Crypto'],
+    datasets: [{ data: [28450000, 42800000, 15600000], backgroundColor: ['#4f7fff','#34d399','#fbbf24'], borderColor: '#181c27', borderWidth: 3, hoverOffset: 5 }]
+  },
+  options: {
+    cutout: '68%', responsive: true, maintainAspectRatio: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: { label: c => ' Rp ' + c.raw.toLocaleString('id-ID') + ' (' + ((c.raw/total)*100).toFixed(1) + '%)' },
+        backgroundColor: '#1f2435', borderColor: 'rgba(255,255,255,.1)', borderWidth: 1,
+        titleColor: '#f0f2f8', bodyColor: '#8a90a8', padding: 10, cornerRadius: 8
+      }
+    }
+  }
+});
+
+// NAVIGATION
+function goPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  const nav = document.querySelector('[data-page="' + id + '"]');
+  if (nav) nav.classList.add('active');
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.addEventListener('click', () => goPage(el.dataset.page));
+});
+
+// SETTINGS TABS
+const stabs = ['st-general','st-notif','st-display','st-privacy','st-danger'];
+function setStab(el, id) {
+  document.querySelectorAll('.sn-item').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+  stabs.forEach(s => { document.getElementById(s).style.display = s === id ? 'block' : 'none'; });
+}
+
+// HIDE BALANCE
+function toggleHide() {
+  const hide = document.getElementById('hideToggle').checked;
+  document.querySelectorAll('.bal-val').forEach(v => {
+    if (hide) { if (!v.dataset.orig) v.dataset.orig = v.textContent; v.textContent = 'Rp •••••'; }
+    else { if (v.dataset.orig) v.textContent = v.dataset.orig; }
+  });
+}
+
+// TOAST
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>
